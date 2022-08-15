@@ -1,0 +1,164 @@
+import os, os.path as osp, sys, pprint, logging, shutil
+
+import seutils
+
+
+PY3 = sys.version_info.major == 3
+PY2 = sys.version_info.major == 2
+
+
+INCLUDE_DIR = osp.join(osp.abspath(osp.dirname(__file__)), "include")
+def version():
+    with open(osp.join(INCLUDE_DIR, "VERSION"), "r") as f:
+        return(f.read().strip())
+
+
+def setup_logger(name='svj_jobs_toolkit'):
+    if name in logging.Logger.manager.loggerDict:
+        logger = logging.getLogger(name)
+        logger.info('Logger %s is already defined', name)
+    else:
+        fmt = logging.Formatter(
+            fmt = (
+                '\033[33m%(levelname)s:%(asctime)s:%(module)s:%(lineno)s\033[0m'
+                + ' %(message)s'
+                ),
+            datefmt='%Y-%m-%d %H:%M:%S'
+            )
+        handler = logging.StreamHandler()
+        handler.setFormatter(fmt)
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(handler)
+    return logger
+logger = setup_logger()
+
+
+class Physics(dict):
+    """Holds the desired physics"""
+
+    def __init__(self, *args, **kwargs):
+        # Set some default values
+        self["mz"] = 150.0
+        self["rinv"] = 0.3
+        self["boost"] = 0.0
+        self["mdark"] = 20.0
+        self["alpha"] = "peak"
+        self["max_events"] = None
+        super(Physics, self).__init__(*args, **kwargs)
+
+    def boost_str(self):
+        """Format string if boost > 0"""
+        return "_PT{0:.0f}".format(self["boost"]) if self["boost"] > 0.0 else ""
+
+    def max_events_str(self):
+        return (
+            "" if self.get("max_events", None) is None
+            else "_n-{0}".format(self["max_events"])
+            )
+
+    def __repr__(self):
+        return pprint.pformat(dict(self))
+
+    def filename(self, step):
+        """
+        Returns the basename of the output rootfile the way SVJProductions would
+        format it for the given physics parameters.
+        """
+        rootfile = (
+            "{step}_s-channel_mMed-{mz:.0f}_mDark-{mdark:.0f}_rinv-{rinv}_"
+            "alpha-{alpha}{boost_str}_13TeV-madgraphMLM-pythia8{max_events_str}.root".format(
+                step=step,
+                boost_str=self.boost_str(),
+                max_events_str=self.max_events_str(),
+                **self
+                )
+            )
+        if self.get("part", None):
+            rootfile = rootfile.replace(".root", "_part-{}.root".format(self["part"]))
+        return rootfile
+
+
+def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre='INPRE', delete_inrootfile=True):
+    """
+    Runs 1 step of the SVJProductions chain.
+    """
+    if physics is None: physics = Physics()
+    in_rootfile_svj = osp.join(cmssw.src, 'SVJ/Production/test', physics.filename(inpre))
+    if in_rootfile:
+        if not osp.isfile(in_rootfile_svj):
+            logger.info('Copying input %s -> %s', in_rootfile, in_rootfile_svj)
+            if seutils.path.has_protocol(in_rootfile):
+                seutils.cp(in_rootfile, in_rootfile_svj)
+            elif move:
+                shutil.move(in_rootfile, in_rootfile_svj)
+            else:
+                shutil.copyfile(in_rootfile, in_rootfile_svj)
+        else:
+            logger.info(
+                'Would now copy %s -> %s, but %s already exist'
+                ' (this is probably a debug session)',
+                in_rootfile, in_rootfile_svj, in_rootfile_svj
+                )
+    if inpre != 'step0_GRIDPACK' and not osp.isfile(in_rootfile_svj):
+        raise Exception(
+            'File {} does not exist.'
+            ' Did you mean to supply the argument in_rootfile?'
+            .format(in_rootfile_svj)
+            )
+    cmd = (
+        "cmsRun runSVJ.py"
+        " year={year}"
+        " madgraph=1"
+        " channel=s"
+        " outpre={outpre}"
+        " config={outpre}"
+        " part={part}"
+        " mMediator={mz:.0f}"
+        " mDark={mdark:.0f}"
+        " rinv={rinv}"
+        " inpre={inpre}".format(inpre=inpre, outpre=step, **physics)
+        )
+    if "mingenjetpt" in physics:
+        cmd += " mingenjetpt={0:.1f}".format(physics["mingenjetpt"])
+    if "boost" in physics:
+        cmd += " boost={0:.0f}".format(physics["boost"])
+    if "max_events" in physics:
+        cmd += " maxEvents={0}".format(physics["max_events"])
+    cmssw.run(['cd SVJ/Production/test', cmd])
+    outfile = osp.join(cmssw.src, 'SVJ/Production/test', physics.filename(step))
+    if osp.isfile(outfile) and delete_inrootfile and step != 'step0_GRIDPACK':
+        logger.warning('Step succeeded; deleting input rootfile %s', in_rootfile_svj)
+    logger.info('Outfile of step: %s', outfile)
+    return outfile
+
+
+def download_madgraph_tarball(
+    cmssw, physics,
+    search_path='root://cmseos.fnal.gov//store/user/lpcdarkqcd/boosted/mgtarballs/2022UL'
+    ):
+    """
+    Downloads tarball from the storage element to correct path inside CMSSW.
+    """
+    # Even though the tarball content does not depend on boost or n_events,
+    # it must still have these things in its filename. It must not have `part`
+    # though.
+    dst = osp.join(
+        cmssw.src, 'SVJ/Production/test',
+        Physics(physics, part=None).filename("step0_GRIDPACK")
+        .replace(".root", ".tar.xz")
+        )
+    if osp.isfile(dst):
+        logger.info("File %s already exists", dst)
+        return dst
+    # Tarballs on SE will *not* have the boost tag, but will have postfix "_n-1"
+    src = osp.join(
+        search_path,
+        Physics(physics, boost=0.0, max_events=1, part=None).filename("step0_GRIDPACK")
+        .replace(".root", ".tar.xz")
+        )
+    if not seutils.isfile(src):
+        raise Exception('File {} does not exist.'.format(src))
+    logger.info("Downloading %s --> %s", src, dst)
+    seutils.cp(src, dst)
+    return dst
