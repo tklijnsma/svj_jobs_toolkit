@@ -79,11 +79,12 @@ class Physics(dict):
         return rootfile
 
 
-def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre='INPRE', delete_inrootfile=True):
+def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre=None, delete_inrootfile=True):
     """
     Runs 1 step of the SVJProductions chain.
     """
     if physics is None: physics = Physics()
+    if inpre is None: inpre = 'INPRE'
     in_rootfile_svj = osp.join(cmssw.src, 'SVJ/Production/test', physics.filename(inpre))
     if in_rootfile:
         if not osp.isfile(in_rootfile_svj):
