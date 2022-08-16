@@ -134,6 +134,40 @@ def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre=None,
     return outfile
 
 
+def run_treemaker(cmssw, rootfile, year=2018, outfile_tag='out'):
+        scenario = {
+            2018 : 'Summer20UL18sig',
+            # '2017' : 'Fall17sig',      # Should probably be different for UL
+            # '2016' : 'Summer16v3sig',  # Should probably be different for UL
+            }
+        cmssw.run([
+            'cd TreeMaker/Production/test',
+            '_CONDOR_CHIRP_CONFIG="" cmsRun runMakeTreeFromMiniAOD_cfg.py'
+            ' numevents=-1'
+            ' outfile={}'
+            ' scenario={}'
+            ' lostlepton=0'
+            ' doZinv=0'
+            ' systematics=0'
+            ' deepAK8=0'
+            ' deepDoubleB=0'
+            ' doPDFs=0'
+            ' nestedVectors=False'
+            ' debugjets=0'
+            ' splitLevel=99'
+            ' boostedsemivisible=1'
+            ' dataset={}'
+            .format(outfile_tag, scenario[2018], rootfile)
+            ])
+        expected_outfile = osp.join(cmssw.src, 'TreeMaker/Production/test/out_RA2AnalysisTree.root')
+        if not osp.isfile(expected_outfile):
+            logger.error(
+                'Treemaker finished but expected outfile %s does not exist!',
+                expected_outfile
+                )
+        return expected_outfile
+
+
 def download_madgraph_tarball(
     cmssw, physics,
     search_path='root://cmseos.fnal.gov//store/user/lpcdarkqcd/boosted/mgtarballs/2022UL'
