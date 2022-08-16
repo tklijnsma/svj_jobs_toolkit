@@ -13,14 +13,14 @@ def version():
         return(f.read().strip())
 
 
-def setup_logger(name='svj_jobs_toolkit'):
+def setup_logger(name='svj'):
     if name in logging.Logger.manager.loggerDict:
         logger = logging.getLogger(name)
         logger.info('Logger %s is already defined', name)
     else:
         fmt = logging.Formatter(
             fmt = (
-                '\033[33m%(levelname)s:%(asctime)s:%(module)s:%(lineno)s\033[0m'
+                '\033[92m%(name)s:%(levelname)s:%(asctime)s:%(module)s:%(lineno)s\033[0m'
                 + ' %(message)s'
                 ),
             datefmt='%Y-%m-%d %H:%M:%S'
