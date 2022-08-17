@@ -140,6 +140,8 @@ def run_treemaker(cmssw, rootfile, year=2018, outfile_tag='out'):
             # '2017' : 'Fall17sig',      # Should probably be different for UL
             # '2016' : 'Summer16v3sig',  # Should probably be different for UL
             }
+        if not seutils.path.has_protocol(rootfile) and not rootfile.startswith('file:'):
+            rootfile = 'file:' + rootfile
         cmssw.run([
             'cd TreeMaker/Production/test',
             '_CONDOR_CHIRP_CONFIG="" cmsRun runMakeTreeFromMiniAOD_cfg.py'
