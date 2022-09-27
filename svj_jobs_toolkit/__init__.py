@@ -124,6 +124,8 @@ def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre=None,
         cmd += " mingenjetpt={0:.1f}".format(physics["mingenjetpt"])
     if "boost" in physics:
         cmd += " boost={0:.0f}".format(physics["boost"])
+    if "boostvar" in physics:
+        cmd += " boostvar={0}".format(physics["boostvar"])
     if "max_events" in physics:
         cmd += " maxEvents={0}".format(physics["max_events"])
     cmssw.run(['cd SVJ/Production/test', cmd])
