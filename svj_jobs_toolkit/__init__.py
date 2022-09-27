@@ -52,7 +52,7 @@ class Physics(dict):
         if self["boost"] == 0.0: return ''
         boostvar = self.get('boostvar', 'genjetpt')
         boostvarstr = {'genjetpt' : 'PT', 'madpt' : 'MADPT'}[boostvar]
-        return "_{0}PT{1:.0f}".format(boostvarstr, self["boost"])
+        return "_{0}{1:.0f}".format(boostvarstr, self["boost"])
 
     def max_events_str(self):
         return (
