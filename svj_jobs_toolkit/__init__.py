@@ -49,7 +49,10 @@ class Physics(dict):
 
     def boost_str(self):
         """Format string if boost > 0"""
-        return "_PT{0:.0f}".format(self["boost"]) if self["boost"] > 0.0 else ""
+        if self["boost"] == 0.0: return ''
+        boostvar = self.get('boostvar', 'genjetpt')
+        boostvarstr = {'genjetpt' : 'PT', 'madpt' : 'MADPT'}[boostvar]
+        return "_{0}PT{1:.0f}".format(boostvarstr, self["boost"])
 
     def max_events_str(self):
         return (
