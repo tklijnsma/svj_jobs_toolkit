@@ -63,14 +63,14 @@ class Physics(dict):
     def __repr__(self):
         return pprint.pformat(dict(self))
 
-    def filename(self, step):
+    def filename(self, step, ext='.root'):
         """
         Returns the basename of the output rootfile the way SVJProductions would
         format it for the given physics parameters.
         """
-        rootfile = (
+        outfile = (
             "{step}_s-channel_mMed-{mz:.0f}_mDark-{mdark:.0f}_rinv-{rinv}_"
-            "alpha-{alpha}{boost_str}_13TeV-madgraphMLM-pythia8{max_events_str}.root".format(
+            "alpha-{alpha}{boost_str}_13TeV-madgraphMLM-pythia8{max_events_str}".format(
                 step=step,
                 boost_str=self.boost_str(),
                 max_events_str=self.max_events_str(),
@@ -78,8 +78,9 @@ class Physics(dict):
                 )
             )
         if self.get("part", None):
-            rootfile = rootfile.replace(".root", "_part-{}.root".format(self["part"]))
-        return rootfile
+            outfile += "_part-{}".format(self["part"])
+        outfile += ext
+        return outfile
 
 
 def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre=None, delete_inrootfile=True):
