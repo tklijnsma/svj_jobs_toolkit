@@ -124,6 +124,8 @@ def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre=None,
         " rinv={rinv}"
         " inpre={inpre}".format(inpre=inpre, outpre=step, **physics)
         )
+    if 'maxEventsIn' in physics:
+        cmd += ' maxEventsIn={:.0f}'.format(physics['maxEventsIn'])
     if "mingenjetpt" in physics:
         cmd += " mingenjetpt={0:.1f}".format(physics["mingenjetpt"])
     if "boost" in physics:
