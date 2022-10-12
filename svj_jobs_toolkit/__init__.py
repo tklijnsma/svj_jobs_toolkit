@@ -178,7 +178,7 @@ def run_treemaker(cmssw, rootfile, year=2018, outfile_tag='out'):
 
 def download_madgraph_tarball(
     cmssw, physics,
-    search_path='root://cmseos.fnal.gov//store/user/lpcdarkqcd/boosted/mgtarballs/2022UL'
+    search_path='root://cmseos.fnal.gov//store/user/lpcdarkqcd/boosted/mgtarballs/2022UL',
     ):
     """
     Downloads tarball from the storage element to correct path inside CMSSW.
@@ -194,11 +194,9 @@ def download_madgraph_tarball(
     if osp.isfile(dst):
         logger.info("File %s already exists", dst)
         return dst
-    # Tarballs on SE will *not* have the boost tag, but will have postfix "_n-1"
     src = osp.join(
         search_path,
-        Physics(physics, boost=0.0, max_events=1, part=None).filename("step0_GRIDPACK")
-        .replace(".root", ".tar.xz")
+        Physics(physics, part=None).filename('step0_GRIDPACK', ext='.tar.xz')
         )
     if not seutils.isfile(src):
         raise Exception('File {} does not exist.'.format(src))
