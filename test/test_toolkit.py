@@ -27,7 +27,7 @@ def test_chain():
     cmssw = CMSSW('CMSSW_10_6_29_patch1')
     physics = svj.Physics({
         'year' : 2018, 'mz' : 250, 'mdark' : 10, 'rinv' : .3,
-        'boost': 0., 'max_events' : 5, 'part' : 1
+        'boost': 0., 'max_events' : 5, 'part' : 1,
         })
     mgtarball = svj.download_madgraph_tarball(cmssw, physics)
     rootfile = svj.run_step(cmssw, 'step_LHE-GEN', physics, inpre='step0_GRIDPACK')

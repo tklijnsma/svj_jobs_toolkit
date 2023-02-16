@@ -82,6 +82,22 @@ class Physics(dict):
         outfile += ext
         return outfile
 
+    def gridpack_filename(self):
+        """
+        Later SVJProductions repo dropped rinv and alpha_dark as part of
+        the filename
+        """
+        return (
+            "step0_GRIDPACK_s-channel_mMed-{mz:.0f}_mDark-{mdark:.0f}"
+            "{boost_str}_13TeV-madgraphMLM-pythia8_n-{maxEventsIn}"
+            ".tar.xz"
+            .format(
+                boost_str=self.boost_str(),
+                maxEventsIn=self.get('maxEventsIn', 10000),
+                **self
+                )
+            )
+
 
 def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre=None, delete_inrootfile=True):
     """
@@ -124,8 +140,8 @@ def run_step(cmssw, step, physics=None, in_rootfile=None, move=True, inpre=None,
         " rinv={rinv}"
         " inpre={inpre}".format(inpre=inpre, outpre=step, **physics)
         )
-    if 'maxEventsIn' in physics:
-        cmd += ' maxEventsIn={:.0f}'.format(physics['maxEventsIn'])
+    if 'maxEventsIn' in physics or inpre=='step0_GRIDPACK':
+        cmd += ' maxEventsIn={:.0f}'.format(physics.get('maxEventsIn', 10000))
     if "mingenjetpt" in physics:
         cmd += " mingenjetpt={0:.1f}".format(physics["mingenjetpt"])
     if "boost" in physics:
@@ -180,7 +196,7 @@ def run_treemaker(cmssw, rootfile, year=2018, outfile_tag='out'):
 
 def download_madgraph_tarball(
     cmssw, physics,
-    search_path='root://cmseos.fnal.gov//store/user/lpcdarkqcd/boosted/mgtarballs/2022UL',
+    search_path='root://cmseos.fnal.gov//store/user/lpcdarkqcd/boosted/mgtarballs/2023MADPT',
     ):
     """
     Downloads tarball from the storage element to correct path inside CMSSW.
@@ -188,18 +204,11 @@ def download_madgraph_tarball(
     # Even though the tarball content does not depend on boost or n_events,
     # it must still have these things in its filename. It must not have `part`
     # though.
-    dst = osp.join(
-        cmssw.src, 'SVJ/Production/test',
-        Physics(physics, part=None).filename("step0_GRIDPACK")
-        .replace(".root", ".tar.xz")
-        )
+    dst = osp.join(cmssw.src, 'SVJ/Production/test', physics.gridpack_filename())
     if osp.isfile(dst):
         logger.info("File %s already exists", dst)
         return dst
-    src = osp.join(
-        search_path,
-        Physics(physics, part=None).filename('step0_GRIDPACK', ext='.tar.xz')
-        )
+    src = osp.join(search_path, physics.gridpack_filename())
     if not seutils.isfile(src):
         raise Exception('File {} does not exist.'.format(src))
     logger.info("Downloading %s --> %s", src, dst)
